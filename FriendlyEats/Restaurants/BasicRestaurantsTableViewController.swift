@@ -33,17 +33,45 @@ class BasicRestaurantsTableViewController: UIViewController, UITableViewDataSour
   var restaurantListener: ListenerRegistration?
 
   private func startListeningForRestaurants() {
-    // TODO: Create a listener for the "restaurants" collection and use that data
-    // to popualte our `restaurantData` model
+    let basicQuery = Firestore.firestore().collection("restaurants").limit(to: 50)
+    restaurantListener = basicQuery.addSnapshotListener({ (snapshot, error) in
+      if let error = error {
+        print("Error occured when retrieving restaurants: \(error.localizedDescription)")
+        return
+      }
+      guard let snapshot = snapshot else { return }
+      self.restaurantData = []
+      for document in snapshot.documents {
+        if let result = Restaurant(document: document) {
+          self.restaurantData.append(result)
+        }
+      }
+      self.tableView.reloadData()
+    })
   }
 
   func tryASampleQuery() {
-    // TODO: Let's put a sample query here to see how basic data fetching works in
-    // Cloud Firestore
+    let basicQuery = Firestore.firestore().collection("restaurants").limit(to: 3)
+    basicQuery.getDocuments { (snapshot, error) in
+      if let error = error {
+        print("Error occured when retrieving restaurants: \(error.localizedDescription)")
+        return
+      }
+      guard let snapshot = snapshot else { return }
+      let allDocuments = snapshot.documents
+      for document in allDocuments {
+        if let result = Restaurant(document: document) {
+          self.restaurantData.append(result)
+        }
+      }
+      self.tableView.reloadData()
+    }
   }
 
   private func stopListeningForRestaurants() {
     // TODO: We should "deactivate" our restaurant listener when this view goes away
+    restaurantListener?.remove()
+    restaurantListener = nil
   }
 
   override func viewDidLoad() {
@@ -57,7 +85,7 @@ class BasicRestaurantsTableViewController: UIViewController, UITableViewDataSour
     activeFiltersStackView.isHidden = true
     tableView.delegate = self
     tableView.dataSource = self
-    tryASampleQuery()
+//    tryASampleQuery()
   }
 
   override func viewWillAppear(_ animated: Bool) {
